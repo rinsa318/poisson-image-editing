@@ -5,7 +5,7 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-17 19:54:45
+  @Last Modified time: 2019-03-17 22:00:12
  ----------------------------------------------------
 
   Usage:
@@ -62,7 +62,9 @@ src = np.array(cv2.imread(src_path, 1), dtype=np.uint8)
 tar = np.array(cv2.imread(tar_path, 1), dtype=np.uint8)
 mask = np.array(cv2.imread(src_mask_path, 0), dtype=np.uint8)
 ret, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU)
-
+# print(src.shape)
+# print(mask.shape)
+# print(tar.shape)
 
 
 ### 4. apply poisson image editing

@@ -5,11 +5,12 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-17 19:54:27
+  @Last Modified time: 2019-03-17 21:37:48
  ----------------------------------------------------
 
 [textbook]
 https://www.cs.unc.edu/~lazebnik/research/fall08/
+https://www.cs.unc.edu/~lazebnik/research/fall08/jia_pan.pdf
 
 
 [referenced code]
@@ -226,7 +227,6 @@ def poisson_blend(src, mask, tar):
   ## create contour mask
   contour = get_contour(mask) # uint8
   mask = np.array(mask, dtype=np.uint8)
-
 
   ## get omega, neigbourhoods flag
   omega, ngb_flag = indicies(mask)
