@@ -5,7 +5,7 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-17 22:00:12
+  @Last Modified time: 2019-03-18 00:57:46
  ----------------------------------------------------
 
   Usage:
@@ -49,12 +49,11 @@ output_dir = "{0}/result".format(tar_dir)
 if(not(os.path.exists(output_dir))):
   os.mkdir(output_dir)
 
-outname_blend = "{0}/blend_src_{1}_tar_{2}{3}".format(output_dir, filename_src, filename_tar, ext_tar)
-outname_simplecopy = "{0}/simplecopy_src_{1}_tar_{2}{3}".format(output_dir, filename_src, filename_tar, ext_tar)
-outname_merge = "{0}/merge_result{1}".format(output_dir, ext_tar)
-outfile = [outname_blend, outname_simplecopy, outname_merge]
+outname_blended = "{0}/blended_src_{1}_tar_{2}{3}".format(output_dir, filename_src, filename_tar, ext_tar)
+outname_overlapped = "{0}/overlapped_src_{1}_tar_{2}{3}".format(output_dir, filename_src, filename_tar, ext_tar)
+outname_merged = "{0}/merged_result{1}".format(output_dir, ext_tar)
+outfile = [outname_blended, outname_overlapped, outname_merged]
 # print(output_path)
-
 
 
 ### 3. load images
@@ -68,19 +67,17 @@ ret, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU)
 
 
 ### 4. apply poisson image editing
-blend, simple_copy = poisson.poisson_blend(src, mask/255.0, tar)
+blended, overlapped = poisson.poisson_blend(src, mask/255.0, tar)
 
 
 
 
 ### 5. save result
 print("save blended image as --> {}".format(outfile))
-temp1 = np.hstack((src, tar))
-temp2 = np.hstack((simple_copy, blend))
-result = np.hstack((temp1, temp2))
-cv2.imwrite(outname_merge, result)
-cv2.imwrite(outname_blend, blend)
-cv2.imwrite(outname_simplecopy, simple_copy)
-cv2.imshow("out", result)
-cv2.waitKey(0)
+merged_result = np.hstack((src, cv2.merge((mask, mask, mask)), tar, overlapped, blended))
+cv2.imwrite(outname_merged, merged_result)
+cv2.imwrite(outname_blended, blended)
+cv2.imwrite(outname_overlapped, overlapped)
+# cv2.imshow("out", merged_result)
+# cv2.waitKey(0)
 
