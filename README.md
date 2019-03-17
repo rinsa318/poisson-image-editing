@@ -1,5 +1,10 @@
 # poisson-image-editing
-Implementation of ["Poisson Image Editing" [1]](http://erikreinhard.com/papers/colourtransfer.pdf). Note: mixing gradients is not implemented. 
+Implementation of ["Poisson Image Editing" [1]](http://erikreinhard.com/papers/colourtransfer.pdf). Note: mixing gradients is not implemented.  
+  
+ToDo
++ speed up
++ add mixing gradients function
++ input structure --> have to take care of image size. Ex) In case of, source and target shape are different.
 
 
 <p align="center">
