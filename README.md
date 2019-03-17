@@ -5,7 +5,7 @@ ToDo
 + speed up
 + add mixing gradients function
 + input structure --> have to take care of image size. Ex) In case of, source and target shape are different.
-
++ want to create GUI
 
 <p align="center">
   <img src="./figure/figure1.png" width=100%>
