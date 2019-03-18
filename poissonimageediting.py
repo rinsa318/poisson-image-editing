@@ -5,8 +5,14 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-18 16:48:41
+  @Last Modified time: 2019-03-19 01:53:31
  ----------------------------------------------------
+
+[original paper]
+[Perez, Patrick](https://ptrckprz.github.io/), Michel Gangnet, and Andrew Blake. 
+"Poisson image editing." 
+ACM Transactions on graphics (TOG) 22.3 (2003): 313-318. 
+[[Paper](http://www.irisa.fr/vista/Papers/2003_siggraph_perez.pdf "Paper")]
 
 [textbook]
 https://www.cs.unc.edu/~lazebnik/research/fall08/
@@ -163,7 +169,7 @@ def coefficient_matrix(omega_list, mask, ngb_flag):
 
   ## create empty sparse matrix
   N = omega_list.shape[0]
-  A = sp.lil_matrix((N, N))
+  A = sp.lil_matrix((N, N), dtype=np.float32)
 
 
   for i in range(N):
@@ -334,10 +340,10 @@ def constrain(target, index, contuor, ngb_flag):
   ## In order to use "Dirichlet boundary condition",
   ## if on boundry, add in target intensity --> set constraint grad(source) = target at boundary
   if(contuor[i][j]==1):
-    val = (int(ngb_flag[0]==False) * target[i, j+1]
-           + int(ngb_flag[1]==False) * target[i, j-1]
-           + int(ngb_flag[2]==False) * target[i+1, j]
-           + int(ngb_flag[3]==False) * target[i-1, j])
+    val = (float(ngb_flag[0]==False) * target[i, j+1]
+           + float(ngb_flag[1]==False) * target[i, j-1]
+           + float(ngb_flag[2]==False) * target[i+1, j]
+           + float(ngb_flag[3]==False) * target[i-1, j])
     return val
 
   ## If not on boundry, just take grad.
@@ -357,12 +363,13 @@ def progress(n, N):
   '''
 
   percent = float(n) / float(N) * 100
-  
-  # if(percent > 99.5):
-  #   percent = 100
-  
-  sys.stdout.write("\r%d" % percent + " [%]")
-  sys.stdout.flush()
+
+  ## convert percent to bar
+  current = "#" * int(percent//2)
+  # current = "=" * int(percent//2)
+  remain = " " * int(100/2-int(percent//2))
+  bar = "|{}{}|".format(current, remain)# + "#" * int(percent//2) + " " * int(100/2-int(percent//2)) + "|"
+  print("\r{}: {:3.0f}[%]".format(bar, percent), end="", flush=True)
   
 
 
@@ -426,17 +433,17 @@ def poisson_blend(src, mask, tar):
   for index in range(omega.shape[0]):
 
     i, j = omega[index]
-    blended[i][j][0] = np.clip(x_b[index], 0, 255)
-    blended[i][j][1] = np.clip(x_g[index], 0, 255)
-    blended[i][j][2] = np.clip(x_r[index], 0, 255)
+    blended[i][j][0] = np.clip(x_b[index], 0.0, 1.0)
+    blended[i][j][1] = np.clip(x_g[index], 0.0, 1.0)
+    blended[i][j][2] = np.clip(x_r[index], 0.0, 1.0)
 
-    blended_mixing[i][j][0] = np.clip(x_b2[index], 0, 255)
-    blended_mixing[i][j][1] = np.clip(x_g2[index], 0, 255)
-    blended_mixing[i][j][2] = np.clip(x_r2[index], 0, 255)
+    blended_mixing[i][j][0] = np.clip(x_b2[index], 0.0, 1.0)
+    blended_mixing[i][j][1] = np.clip(x_g2[index], 0.0, 1.0)
+    blended_mixing[i][j][2] = np.clip(x_r2[index], 0.0, 1.0)
 
     overlapped[i][j][0] = src[i][j][0]
     overlapped[i][j][1] = src[i][j][1]
     overlapped[i][j][2] = src[i][j][2]
 
 
-  return blended, blended_mixing, overlapped
+  return np.array(blended*255, dtype=np.uint8), np.array(blended_mixing*255, dtype=np.uint8), np.array(overlapped*255, dtype=np.uint8)

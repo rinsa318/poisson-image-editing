@@ -5,7 +5,7 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-18 16:40:52
+  @Last Modified time: 2019-03-18 17:22:41
  ----------------------------------------------------
 
   Usage:
@@ -58,8 +58,8 @@ outfile = [outname_blended, outname_blended_mixing,outname_overlapped, outname_m
 
 
 ### 3. load images
-src = np.array(cv2.imread(src_path, 1), dtype=np.uint8)
-tar = np.array(cv2.imread(tar_path, 1), dtype=np.uint8)
+src = np.array(cv2.imread(src_path, 1)/255.0, dtype=np.float32)
+tar = np.array(cv2.imread(tar_path, 1)/255.0, dtype=np.float32)
 mask = np.array(cv2.imread(src_mask_path, 0), dtype=np.uint8)
 ret, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU)
 # print(src.shape)
@@ -68,14 +68,14 @@ ret, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU)
 
 
 ### 4. apply poisson image editing
-blended, blended_mixing,overlapped = poisson.poisson_blend(src, mask/255.0, tar)
+blended, blended_mixing, overlapped = poisson.poisson_blend(src, mask/255.0, tar)
 
 
 
 
 ### 5. save result
 print("save blended image as \n--> \n{0}\n{1}\n{2}\n{3}".format(outfile[0], outfile[1], outfile[2], outfile[3]))
-merged_result = np.hstack((src, cv2.merge((mask, mask, mask)), tar, overlapped, blended))
+merged_result = np.hstack((np.array(src*255, dtype=np.uint8), cv2.merge((mask, mask, mask)), np.array(tar*255, dtype=np.uint8), overlapped, blended))
 cv2.imwrite(outname_merged, merged_result)
 cv2.imwrite(outname_blended, blended)
 cv2.imwrite(outname_blended_mixing, blended_mixing)
