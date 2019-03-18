@@ -5,7 +5,7 @@
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
   @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-17 21:37:48
+  @Last Modified time: 2019-03-18 16:48:41
  ----------------------------------------------------
 
 [textbook]
@@ -15,7 +15,8 @@ https://www.cs.unc.edu/~lazebnik/research/fall08/jia_pan.pdf
 
 [referenced code]
 https://github.com/roadfromatoz/poissonImageEditing/blob/master/GradientDomainClone.py
-
+https://github.com/peihaowang/PoissonImageEditing
+https://github.com/datawine/poisson_image_editing
 
 """
 
@@ -24,6 +25,7 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg
 import cv2
+import sys
 
 
 
@@ -49,7 +51,7 @@ def check_existence(mask, id_h, id_w):
 
   h, w = mask.shape
 
-  if(0 <= id_h and id_h <= h and 0 <= id_w and id_w <= w):
+  if(0 <= id_h and id_h <= h-1 and 0 <= id_w and id_w <= w-1):
     if(mask[id_h][id_w]==1):
       return bool(1)
 
@@ -116,7 +118,8 @@ def index4omega(omega, id_h, id_w):
 
 
 
-def laplacian_at_index(source, target, index, contuor, ngb_flag):
+
+def laplacian_at_index(source, index, contuor, ngb_flag):
 
   '''
   Function to calculate gradient with respect given index.
@@ -133,29 +136,15 @@ def laplacian_at_index(source, target, index, contuor, ngb_flag):
   ## current location
   i, j = index
 
+  ## take laplacian
+  N = np.sum(ngb_flag == True)
+  val = (N * source[i, j]
+         - (int(ngb_flag[0]==True) * source[i, j+1])
+         - (int(ngb_flag[1]==True) * source[i, j-1])
+         - (int(ngb_flag[2]==True) * source[i+1, j])
+         - (int(ngb_flag[3]==True) * source[i-1, j]))
 
-  ## In order to use "Dirichlet boundary condition",
-  ## if on boundry, add in target intensity --> set constraint grad(source) = target at boundary
-  if(contuor[i][j]==1):
-    val = (4 * source[i,j]
-           - source[i, j+1]
-           - source[i, j-1]
-           - source[i+1, j]
-           - source[i-1, j])
-    val += (int(ngb_flag[0]==False) * target[i, j+1]
-           + int(ngb_flag[1]==False) * target[i, j-1]
-           + int(ngb_flag[2]==False) * target[i+1, j]
-           + int(ngb_flag[3]==False) * target[i-1, j])
-    return val
-
-  ## If not on boundry, just take grad.
-  else:
-    val = (4 * source[i,j]
-           - source[i, j+1]
-           - source[i, j-1]
-           - source[i+1, j]
-           - source[i-1, j])
-    return val
+  return val
 
 
 
@@ -178,7 +167,12 @@ def coefficient_matrix(omega_list, mask, ngb_flag):
 
 
   for i in range(N):
+
+    ## progress
+    progress(i, N-1)
+
     A[i, i] = 4
+    # A[i, i] = np.sum(ngb_flag[i] == True)
     id_h, id_w = omega_list[i]
 
     ## fill -1 for surrounding pixel
@@ -207,7 +201,174 @@ def coefficient_matrix(omega_list, mask, ngb_flag):
 
 
 
-### Run Poisson image editing on given a src, tar, and src_mask
+
+
+def gradient_matrix(src, tar, omega, contour, ngb_flag):
+
+
+  '''
+    Create gradient matrix
+    --> b
+
+    input: source, target image --> 3 channel
+           omega                --> index of valid pixel
+           contour              --> coutour mask(mask.shape[0], mask.shape[1])
+           ngb_flag             --> neigbourhood's flag at [i, j], (4,), bool
+
+    return: laplacian(src)[channel]
+
+  '''  
+
+  ### output array
+  b_b = np.zeros(omega.shape[0])
+  b_g = np.zeros(omega.shape[0])
+  b_r = np.zeros(omega.shape[0])
+
+
+  ### take laplacian
+  for index in range(omega.shape[0]):
+
+    ## progress
+    progress(index, omega.shape[0]-1)
+
+    ## apply each color channel
+    y, x = omega[index]
+    b_b[index] = laplacian_at_index(src[:, :, 0], omega[index], contour, ngb_flag[index]) + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    b_g[index] = laplacian_at_index(src[:, :, 1], omega[index], contour, ngb_flag[index]) + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    b_r[index] = laplacian_at_index(src[:, :, 2], omega[index], contour, ngb_flag[index]) + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+
+
+  return b_b, b_g, b_r 
+
+
+
+
+def mixing_gradient_matrix(src, tar, omega, contour, ngb_flag):
+
+
+  '''
+    Create gradient matrix
+    --> b
+
+    input: source, target image --> 3 channel
+           omega                --> index of valid pixel
+           contour              --> coutour mask(mask.shape[0], mask.shape[1])
+           ngb_flag             --> neigbourhood's flag at [i, j], (4,), bool
+
+    return: laplacian(src)[channel]
+
+  '''  
+
+  ### output array
+  b_b = np.zeros(omega.shape[0])
+  b_g = np.zeros(omega.shape[0])
+  b_r = np.zeros(omega.shape[0])
+
+
+  ### take laplacian
+  for index in range(omega.shape[0]):
+
+    ## progress
+    progress(index, omega.shape[0]-1)
+
+    ## apply each color channel
+    y, x = omega[index]
+    b_b_s = laplacian_at_index(src[:, :, 0], omega[index], contour, ngb_flag[index])
+    b_g_s = laplacian_at_index(src[:, :, 1], omega[index], contour, ngb_flag[index])
+    b_r_s = laplacian_at_index(src[:, :, 2], omega[index], contour, ngb_flag[index])
+
+    b_b_t = laplacian_at_index(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    b_g_t = laplacian_at_index(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    b_r_t = laplacian_at_index(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+
+    # if(abs(b_b_s) + abs(b_g_s) + abs(b_r_s) < abs(b_b_t) + abs(b_g_t) + abs(b_r_t)):
+    #   b_b[index] = b_b_t + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    #   b_g[index] = b_g_t + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    #   b_r[index] = b_r_t + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+    # else:
+    #   b_b[index] = b_b_s + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    #   b_g[index] = b_g_s + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    #   b_r[index] = b_r_s + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+
+    # print(abs(b_b_s), abs(b_b_t))
+    if(abs(b_b_s) < abs(b_b_t)):
+      b_b[index] = b_b_t + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    else:
+      b_b[index] = b_b_s + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+
+    if(abs(b_g_s) < abs(b_g_t)):
+      b_g[index] = b_g_t + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    else:
+      b_g[index] = b_g_s + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+
+    if(abs(b_r_s) < abs(b_r_t)):
+      b_r[index] = b_r_t + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+    else:
+      b_r[index] = b_r_s + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+
+
+
+  return b_b, b_g, b_r
+
+
+
+
+def constrain(target, index, contuor, ngb_flag):
+
+  '''
+  Function to set constraint grad(source) = target at boundary
+
+  input; tar      --> one channel, same size
+         index    --> omega's coordinate[i, j]
+         contour  --> coutour mask(mask.shape[0], mask.shape[1])
+         ngb_flag --> neigbourhood's flag at [i, j], (4,), bool
+
+
+  return Dirichlet boundary condition for index
+  '''
+  
+  ## current location
+  i, j = index
+
+
+  ## In order to use "Dirichlet boundary condition",
+  ## if on boundry, add in target intensity --> set constraint grad(source) = target at boundary
+  if(contuor[i][j]==1):
+    val = (int(ngb_flag[0]==False) * target[i, j+1]
+           + int(ngb_flag[1]==False) * target[i, j-1]
+           + int(ngb_flag[2]==False) * target[i+1, j]
+           + int(ngb_flag[3]==False) * target[i-1, j])
+    return val
+
+  ## If not on boundry, just take grad.
+  else:
+    val = 0.0
+    return val
+
+
+
+
+
+
+def progress(n, N):
+
+  '''
+  print current progress
+  '''
+
+  percent = float(n) / float(N) * 100
+  
+  # if(percent > 99.5):
+  #   percent = 100
+  
+  sys.stdout.write("\r%d" % percent + " [%]")
+  sys.stdout.flush()
+  
+
+
+
+
+
 def poisson_blend(src, mask, tar):
 
   '''
@@ -219,58 +380,63 @@ def poisson_blend(src, mask, tar):
 
   '''
 
-  ## output
-  blend = tar.copy()
-  simple_copy = tar.copy()
+  ### output
+  blended = tar.copy()
+  blended_mixing = tar.copy()
+  overlapped = tar.copy()
 
 
-  ## create contour mask
+  ### create contour mask
   contour = get_contour(mask) # uint8
   mask = np.array(mask, dtype=np.uint8)
 
-  ## get omega, neigbourhoods flag
+  ### get omega, neigbourhoods flag
   omega, ngb_flag = indicies(mask)
 
 
-  ## fill A
-  print("filling coefficient matrix: A")
+  ### fill A
+  print("step1: filling coefficient matrix: A")
   A = coefficient_matrix(omega, mask, ngb_flag)
+  print("\ndone!\n")
   # print(A.shape)
   # print(A.dtype)
 
 
-  ## fill b for each color channel
-  print("filling gradient matrix: b")
-  b_b = np.zeros(omega.shape[0])
-  b_g = np.zeros(omega.shape[0])
-  b_r = np.zeros(omega.shape[0])
-
-  for index in range(omega.shape[0]):
-    y, x = omega[index]
-    b_b[index] = laplacian_at_index(src[:, :, 0], tar[:, :, 0], omega[index], contour, ngb_flag[index])
-    b_g[index] = laplacian_at_index(src[:, :, 1], tar[:, :, 1], omega[index], contour, ngb_flag[index])
-    b_r[index] = laplacian_at_index(src[:, :, 2], tar[:, :, 2], omega[index], contour, ngb_flag[index])
+  ### fill b
+  ### --> each color channel
+  print("step2: filling gradient matrix: b")
+  b_b, b_g, b_r = gradient_matrix(src, tar, omega, contour, ngb_flag)
+  b_b2, b_g2, b_r2 =  mixing_gradient_matrix(src, tar, omega, contour, ngb_flag)
+  print("\ndone!\n")
 
 
-  print("solve Ax = b")
+  ### solve
+  print("step3: solve Ax = b")
   x_b, info_b = sp.linalg.cg(A, b_b)
   x_g, info_g = sp.linalg.cg(A, b_g)
   x_r, info_r = sp.linalg.cg(A, b_r)
-  print(".....done!")
+  x_b2, info_b2 = sp.linalg.cg(A, b_b2)
+  x_g2, info_g2 = sp.linalg.cg(A, b_g2)
+  x_r2, info_r2 = sp.linalg.cg(A, b_r2)
+  print("done!\n")
 
 
 
-  ## create output by using x
+  ### create output by using x
   for index in range(omega.shape[0]):
 
     i, j = omega[index]
-    blend[i][j][0] = np.clip(x_b[index], 0, 255)
-    blend[i][j][1] = np.clip(x_g[index], 0, 255)
-    blend[i][j][2] = np.clip(x_r[index], 0, 255)
+    blended[i][j][0] = np.clip(x_b[index], 0, 255)
+    blended[i][j][1] = np.clip(x_g[index], 0, 255)
+    blended[i][j][2] = np.clip(x_r[index], 0, 255)
 
-    simple_copy[i][j][0] = src[i][j][0]
-    simple_copy[i][j][1] = src[i][j][1]
-    simple_copy[i][j][2] = src[i][j][2]
+    blended_mixing[i][j][0] = np.clip(x_b2[index], 0, 255)
+    blended_mixing[i][j][1] = np.clip(x_g2[index], 0, 255)
+    blended_mixing[i][j][2] = np.clip(x_r2[index], 0, 255)
+
+    overlapped[i][j][0] = src[i][j][0]
+    overlapped[i][j][1] = src[i][j][1]
+    overlapped[i][j][2] = src[i][j][2]
 
 
-  return blend, simple_copy
+  return blended, blended_mixing, overlapped
