@@ -1,14 +1,16 @@
 # poisson-image-editing
-Implementation of ["Poisson Image Editing" [1]](http://erikreinhard.com/papers/colourtransfer.pdf). Note: mixing gradients is not implemented.  
+Implementation of ["Poisson Image Editing"](http://erikreinhard.com/papers/colourtransfer.pdf).  
+  
+Note: "Selection editing" section(Texture attening, Local illumination changes, Local color changes, Seamless tiling) is not implemented.  
   
 ToDo
-+ speed up
-+ add mixing gradients function
-+ input structure --> have to take care of image size. Ex) In case of, source and target shape are different.
++ speed up 
++ implement "Selection editing" functions
++ add offset information
 + want to create GUI
 
 <p align="center">
-  <img src="./figure/figure1.png" width=100%>
+  <img src="./figure/figure1.png" width=95%>
 </p>
 
 
@@ -37,7 +39,8 @@ python main.py argvs[1] argvs[2] argvs[3]
 --> 
 argvs[1]  :  path to source image   
 argvs[2]  :  path to mask image
-argvs[2]  :  path to target image
+argvs[3]  :  path to target image
+argvs[4]  :  method
 
 ```
 

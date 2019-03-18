@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
-  @Last Modified by:   Tsukasa Nozawa
-  @Last Modified time: 2019-03-19 06:00:13
+  @Last Modified by:   rinsa318
+  @Last Modified time: 2019-03-19 07:12:22
  ----------------------------------------------------
 
   Usage:
@@ -55,8 +55,9 @@ if(not(os.path.exists(output_dir))):
   os.mkdir(output_dir)
 
 outname = "{0}/result_{1}{2}".format(output_dir, method, ext_tar)
+outname_overlapped = "{0}/overlapped{1}".format(output_dir, ext_tar)
 outname_merged = "{0}/merged_result_{1}{2}".format(output_dir, method, ext_tar)
-outfile = [outname, outname_merged]
+outfile = [outname, outname_overlapped, outname_merged]
 
 
 
@@ -76,9 +77,10 @@ blended, overlapped = poisson.poisson_blend(src, mask/255.0, tar, method, output
 
 
 ### 5. save result
-print("save blended image as \n--> \n{0}\n{1}".format(outfile[0], outfile[1]))
+print("save blended image as \n--> \n{0}\n{1}\n{2}".format(outfile[0], outfile[1], outfile[2]))
 merged_result = np.hstack((np.array(src*255, dtype=np.uint8), cv2.merge((mask, mask, mask)), np.array(tar*255, dtype=np.uint8), overlapped, blended))
 cv2.imwrite(outname_merged, merged_result)
+cv2.imwrite(outname_overlapped, overlapped)
 cv2.imwrite(outname, blended)
 # cv2.imshow("output", merged_result)
 # cv2.waitKey(0)
