@@ -105,3 +105,4 @@ venv.bak/
 images/
 *.ai
 *.mat
+*.sh
