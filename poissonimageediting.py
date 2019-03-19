@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
-  @Last Modified by:   Tsukasa Nozawa
-  @Last Modified time: 2019-03-19 06:08:26
+  @Last Modified by:   rinsa318
+  @Last Modified time: 2019-03-19 23:37:18
  ----------------------------------------------------
 
 [original paper]
@@ -88,20 +88,28 @@ def indicies(mask):
   omega_list = np.concatenate([y, x], 1)
 
 
-  ## flag of neigbourhoods pixel.
-  ## write TRUE if neigbourhoods pixel is exist, FALSE otherwise.
+  ## 1. flag of neigbourhoods pixel.
+  ## --> write TRUE if neigbourhoods pixel is exist, FALSE otherwise.
+  ## 2. dictionary for omega's index
   ngb_flag = []
+  omega_yx = np.zeros((h, w), dtype=np.int32)
   for index in range(omega_list.shape[0]):
+
+    ## pixel location
     i, j = omega_list[index]
 
+    ## create neigbourhoods flag
     ngb_flag.append([check_existence(mask, i, j+1),
                      check_existence(mask, i, j-1),
                      check_existence(mask, i+1, j),
                      check_existence(mask, i-1, j),])
 
-  ngb_flag = np.array(ngb_flag, dtype=bool)
+    ## store index to dictionary
+    omega_yx[i][j] = index
 
-  return omega_list, ngb_flag
+
+
+  return omega_list, np.array(ngb_flag, dtype=bool), omega_yx
 
 
 
@@ -218,7 +226,7 @@ def lap_at_index_mixing(source, target, index, contuor, ngb_flag):
 
 
 
-def coefficient_matrix(omega_list, mask, ngb_flag):
+def coefficient_matrix(omega_list, mask, ngb_flag, omega_yx):
 
   '''
     Create poisson matrix
@@ -239,29 +247,30 @@ def coefficient_matrix(omega_list, mask, ngb_flag):
     ## progress
     progress_bar(i, N-1)
 
+
+    ## fill 4 or -1
+    ## center
     A[i, i] = 4
-    # A[i, i] = np.sum(ngb_flag[i] == True)
     id_h, id_w = omega_list[i]
 
-    ## fill -1 for surrounding pixel
     ## right
     if(ngb_flag[i][0]):
-      j = index4omega(omega_list, id_h, id_w+1)
+      j = omega_yx[id_h][id_w+1]
       A[i, j] = -1
 
     ## left
     if(ngb_flag[i][1]):
-      j = index4omega(omega_list, id_h, id_w-1)
+      j = omega_yx[id_h][id_w-1]
       A[i, j] = -1
 
     ## bottom
     if(ngb_flag[i][2]):
-      j = index4omega(omega_list, id_h+1, id_w)
+      j = omega_yx[id_h+1][id_w]
       A[i, j] = -1
 
     ## up
     if(ngb_flag[i][3]):
-      j = index4omega(omega_list, id_h-1, id_w)
+      j = omega_yx[id_h-1][id_w]
       A[i, j] = -1
 
   return A
@@ -481,7 +490,7 @@ def poisson_blend(src, mask, tar, method, output_dir):
 
 
   ### get omega, neigbourhoods flag
-  omega, ngb_flag = indicies(mask)
+  omega, ngb_flag, yx_omega = indicies(mask)
 
 
 
@@ -494,7 +503,7 @@ def poisson_blend(src, mask, tar, method, output_dir):
     A = scipy.io.loadmat("{}/A".format(output_dir))["A"]
     print("load coefficient matrix: A from .mat file\n")
   else:
-    A = coefficient_matrix(omega, mask, ngb_flag)
+    A = coefficient_matrix(omega, mask, ngb_flag, yx_omega)
     scipy.io.savemat("{}/A".format(output_dir), {"A":A}) 
     print("\n")
 
