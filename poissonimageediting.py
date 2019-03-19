@@ -467,7 +467,7 @@ def poisson_blend(src, mask, tar, method, output_dir):
   solve Au = b
 
   -> A: poisson matrix
-     b: gradient(g)
+     b: (g)
      u: final pixel value
 
   '''
