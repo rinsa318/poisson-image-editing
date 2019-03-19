@@ -4,7 +4,6 @@ Implementation of ["Poisson Image Editing"](http://erikreinhard.com/papers/colou
 Note: "Selection editing" section(Texture attening, Local illumination changes, Local color changes, Seamless tiling) is not implemented.  
   
 ToDo
-+ speed up 
 + implement "Selection editing" functions
 + add offset information
 + want to create GUI
