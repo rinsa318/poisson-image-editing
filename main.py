@@ -9,7 +9,7 @@
  ----------------------------------------------------
 
   Usage:
-   python main.py argvs[1] argvs[2] argvs[3]...
+   python main.py argvs[1] argvs[2] argvs[3] argvs[4]
   
    argvs[1]  :  source image
    argvs[2]  :  source image's mask
