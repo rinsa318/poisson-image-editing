@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
-  @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-19 23:56:00
+  @Last Modified by:   Tsukasa Nozawa
+  @Last Modified time: 2019-03-21 23:22:59
  ----------------------------------------------------
 
   Usage:
@@ -14,7 +14,7 @@
    argvs[1]  :  source image
    argvs[2]  :  source image's mask
    argvs[3]  :  target image
-   argvs[4]  :  method name --> import, mix
+   argvs[4]  :  method name --> import, mix, average, flatten
 
 """
 
