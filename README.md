@@ -10,18 +10,19 @@ ToDo
 
 <p align="center">
   <img src="./figure/figure1.png" width=95%>
+  <div style="text-align: center;">
+    Figure1. Seamless cloning(import, mixing gradients)
+  </div>
 </p>
-<div style="text-align: center;">
-  Figure1. Seamless cloning(import, mixing gradients)
-</div>
+
 
 
 <p align="center">
   <img src="./figure/figure2.png" width=95%>
-</p>
 <div style="text-align: center;">
   Figure2. Selection editing(texuture flattening, local illumination changes, Local color changes)
 </div>
+</p>
 
 
 ## Environment
