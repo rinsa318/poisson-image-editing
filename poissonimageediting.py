@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
-  @Last Modified by:   Tsukasa Nozawa
-  @Last Modified time: 2019-03-21 23:22:30
+  @Last Modified by:   rinsa318
+  @Last Modified time: 2019-03-22 02:50:37
  ----------------------------------------------------
 
 [original paper]
@@ -51,13 +51,13 @@ def get_contour(mask):
 
 
 
-def get_edge(gray, weight=1):
+def get_edge(gray, weight=2):
 
   '''
   input: gray image
   return: binary edge mask
 
-  --> weight value can change thickness, 1 or 2 is good.
+  --> weight value can change thickness, 2 or 3 is good for example picture.
 
   '''
 
@@ -442,8 +442,7 @@ def mixing_gradients(src, tar, omega, contour, ngb_flag):
 
 
 
-def 
-texture_flatten(src, tar, omega, contour, ngb_flag):
+def texture_flatten(src, tar, omega, contour, ngb_flag):
   
   '''
     Create gradient matrix
@@ -467,11 +466,9 @@ texture_flatten(src, tar, omega, contour, ngb_flag):
   ### binary mask turned on at a few locations of interest
   ### --> edge image
   gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-  # edge_mask = cv2.Canny(np.array(gray*255, dtype=np.uint8), 100, 200)
   edge_mask = get_edge(np.array(gray*255, dtype=np.uint8))
-  cv2.imshow("edge", edge_mask*255)
-  cv2.waitKey(0)
 
+  
   ### take laplacian
   for index in range(omega.shape[0]):
 

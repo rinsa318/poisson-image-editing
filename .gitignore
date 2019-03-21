@@ -106,4 +106,4 @@ images/
 *.ai
 *.mat
 *.sh
-test/
+#test/
