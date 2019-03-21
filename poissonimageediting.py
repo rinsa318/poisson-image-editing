@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:51
-  @Last Modified by:   rinsa318
-  @Last Modified time: 2019-03-19 23:37:18
+  @Last Modified by:   Tsukasa Nozawa
+  @Last Modified time: 2019-03-21 23:22:30
  ----------------------------------------------------
 
 [original paper]
@@ -48,6 +48,38 @@ def get_contour(mask):
 
   return contours
 
+
+
+
+def get_edge(gray, weight=1):
+
+  '''
+  input: gray image
+  return: binary edge mask
+
+  --> weight value can change thickness, 1 or 2 is good.
+
+  '''
+
+
+  ### get edge from filter
+  raw_edge = cv2.Canny(gray, 100, 200)
+  edge = np.zeros((raw_edge.shape[0], raw_edge.shape[1]), dtype=np.uint8)
+
+  ### make edge bold by using weight vale
+  for i in range(edge.shape[0]):
+    for j in range(edge.shape[1]):
+
+        if(raw_edge[i][j] != 0):
+
+          for p in range(-weight, weight):
+            for q in range(-weight, weight):\
+
+              new_edge_i = min(max(0, i + p), edge.shape[0] - 1)
+              new_edge_j = min(max(0, j + q), edge.shape[1] - 1)
+              edge[new_edge_i][new_edge_j] = 1
+
+  return edge
 
 
 
@@ -152,10 +184,10 @@ def lap_at_index(source, index, contuor, ngb_flag):
   ## take laplacian
   N = np.sum(ngb_flag == True)
   val = (N * source[i, j]
-         - (int(ngb_flag[0]==True) * source[i, j+1])
-         - (int(ngb_flag[1]==True) * source[i, j-1])
-         - (int(ngb_flag[2]==True) * source[i+1, j])
-         - (int(ngb_flag[3]==True) * source[i-1, j]))
+         - (float(ngb_flag[0]==True) * source[i, j+1])
+         - (float(ngb_flag[1]==True) * source[i, j-1])
+         - (float(ngb_flag[2]==True) * source[i+1, j])
+         - (float(ngb_flag[3]==True) * source[i-1, j]))
 
   return val
 
@@ -195,16 +227,16 @@ def lap_at_index_mixing(source, target, index, contuor, ngb_flag):
 
 
   ## gradient for source image
-  grad_right_src = int(ngb_flag[0]==True) * (source[i, j] - source[i, j+1])
-  grad_left_src = int(ngb_flag[1]==True) * (source[i, j] - source[i, j-1])
-  grad_bottom_src = int(ngb_flag[2]==True) * (source[i, j] - source[i+1, j])
-  grad_up_src = int(ngb_flag[3]==True) * (source[i, j] - source[i-1, j])
+  grad_right_src = float(ngb_flag[0]==True) * (source[i, j] - source[i, j+1])
+  grad_left_src = float(ngb_flag[1]==True) * (source[i, j] - source[i, j-1])
+  grad_bottom_src = float(ngb_flag[2]==True) * (source[i, j] - source[i+1, j])
+  grad_up_src = float(ngb_flag[3]==True) * (source[i, j] - source[i-1, j])
 
   ## gradient for target image
-  grad_right_tar = int(ngb_flag[0]==True) * (target[i, j] - target[i, j+1])
-  grad_left_tar = int(ngb_flag[1]==True) * (target[i, j] - target[i, j-1])
-  grad_bottom_tar = int(ngb_flag[2]==True) * (target[i, j] - target[i+1, j])
-  grad_up_tar = int(ngb_flag[3]==True) * (target[i, j] - target[i-1, j])
+  grad_right_tar = float(ngb_flag[0]==True) * (target[i, j] - target[i, j+1])
+  grad_left_tar = float(ngb_flag[1]==True) * (target[i, j] - target[i, j-1])
+  grad_bottom_tar = float(ngb_flag[2]==True) * (target[i, j] - target[i+1, j])
+  grad_up_tar = float(ngb_flag[3]==True) * (target[i, j] - target[i-1, j])
 
 
   val = [grad_right_src, grad_left_src, grad_bottom_src, grad_up_src]
@@ -222,6 +254,50 @@ def lap_at_index_mixing(source, target, index, contuor, ngb_flag):
     val[3] = grad_up_tar
 
   return val[0] + val[1] + val[2] + val[3]
+
+
+
+
+def lap_at_index_faltten(source, index, contuor, ngb_flag, edge_mask):
+
+  '''
+  Function to calculate gradient with respect given index.
+
+  input; src, tar --> one channel, same size
+         index    --> omega's coordinate[i, j]
+         contour  --> coutour mask(mask.shape[0], mask.shape[1])
+         ngb_flag --> neigbourhood's flag at [i, j], (4,), bool
+
+
+  return grad(source) with Dirichlet boundary condition
+
+
+                grad_up
+            o-----o-----o
+            |     A     |
+            |     |     |
+  grad_left o<----o---->o grad_right
+            |     |     |
+            |     v     |
+            o-----o-----o
+                 grad_bottom
+
+  '''
+  
+  ## current location
+  i, j = index
+
+  ## gradient for source image
+  grad_right_src = float(ngb_flag[0]==True) * (source[i, j] - source[i, j+1]) * float(edge_mask[i][j])
+  grad_left_src = float(ngb_flag[1]==True) * (source[i, j] - source[i, j-1]) * float(edge_mask[i][j-1])
+  grad_bottom_src = float(ngb_flag[2]==True) * (source[i, j] - source[i+1, j]) * float(edge_mask[i][j])
+  grad_up_src = float(ngb_flag[3]==True) * (source[i, j] - source[i-1, j]) * float(edge_mask[i-1][j])
+
+
+  val = grad_right_src + grad_left_src + grad_bottom_src + grad_up_src
+
+
+  return val
 
 
 
@@ -280,7 +356,7 @@ def coefficient_matrix(omega_list, mask, ngb_flag, omega_yx):
 
 
 
-def gradient_matrix(src, tar, omega, contour, ngb_flag):
+def importing_gradients(src, tar, omega, contour, ngb_flag):
 
 
   '''
@@ -322,7 +398,7 @@ def gradient_matrix(src, tar, omega, contour, ngb_flag):
 
 
 
-def mixing_gradient_matrix(src, tar, omega, contour, ngb_flag):
+def mixing_gradients(src, tar, omega, contour, ngb_flag):
 
 
   '''
@@ -351,20 +427,74 @@ def mixing_gradient_matrix(src, tar, omega, contour, ngb_flag):
     progress_bar(index, omega.shape[0]-1)
 
     ## apply each color channel
-    u_b_mix = lap_at_index_mixing(src[:, :, 0], tar[:, :, 0], omega[index], contour, ngb_flag[index])
-    u_g_mix = lap_at_index_mixing(src[:, :, 1], tar[:, :, 1], omega[index], contour, ngb_flag[index])
-    u_r_mix = lap_at_index_mixing(src[:, :, 2], tar[:, :, 2], omega[index], contour, ngb_flag[index])
-    
-    u_b[index] = u_b_mix + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
-    u_g[index] = u_g_mix + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
-    u_r[index] = u_r_mix + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+    u_b[index] = lap_at_index_mixing(src[:, :, 0], tar[:, :, 0], omega[index], contour, ngb_flag[index]) \
+                + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    u_g[index] = lap_at_index_mixing(src[:, :, 1], tar[:, :, 1], omega[index], contour, ngb_flag[index]) \
+                + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    u_r[index] = lap_at_index_mixing(src[:, :, 2], tar[:, :, 2], omega[index], contour, ngb_flag[index]) \
+                + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
 
 
   return u_b, u_g, u_r
 
 
 
-def average_gradient_matrix(src, tar, omega, contour, ngb_flag):
+
+
+
+def 
+texture_flatten(src, tar, omega, contour, ngb_flag):
+  
+  '''
+    Create gradient matrix
+    --> u
+
+    input: source, target image --> 3 channel
+           omega                --> index of valid pixel
+           contour              --> coutour mask(mask.shape[0], mask.shape[1])
+           ngb_flag             --> neigbourhood's flag at [i, j], (4,), bool
+
+    return: laplacian(src)[channel]
+
+  '''  
+
+  ### output array
+  u_b = np.zeros(omega.shape[0])
+  u_g = np.zeros(omega.shape[0])
+  u_r = np.zeros(omega.shape[0])
+
+
+  ### binary mask turned on at a few locations of interest
+  ### --> edge image
+  gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+  # edge_mask = cv2.Canny(np.array(gray*255, dtype=np.uint8), 100, 200)
+  edge_mask = get_edge(np.array(gray*255, dtype=np.uint8))
+  cv2.imshow("edge", edge_mask*255)
+  cv2.waitKey(0)
+
+  ### take laplacian
+  for index in range(omega.shape[0]):
+
+    ## progress
+    progress_bar(index, omega.shape[0]-1)
+
+    ## apply each color channel
+    i, j = omega[index]
+
+    u_b[index] = lap_at_index_faltten(src[:, :, 0], omega[index], contour, ngb_flag[index], edge_mask) \
+                  + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    u_g[index] = lap_at_index_faltten(src[:, :, 1], omega[index], contour, ngb_flag[index], edge_mask) \
+                  + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    u_r[index] = lap_at_index_faltten(src[:, :, 2], omega[index], contour, ngb_flag[index], edge_mask) \
+                  + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+
+
+  return u_b, u_g, u_r 
+
+
+
+
+def average_gradients(src, tar, omega, contour, ngb_flag):
 
 
   '''
@@ -401,14 +531,18 @@ def average_gradient_matrix(src, tar, omega, contour, ngb_flag):
     u_g_tar = lap_at_index(tar[:, :, 1], omega[index], contour, ngb_flag[index])
     u_r_tar = lap_at_index(tar[:, :, 2], omega[index], contour, ngb_flag[index])
 
-    u_b[index] = (u_b_tar + u_b_src) / 2.0 + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
-    u_g[index] = (u_g_tar + u_g_src) / 2.0 + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
-    u_r[index] = (u_r_tar + u_r_src) / 2.0 + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
+    u_b[index] = (u_b_tar + u_b_src) / 2.0 \
+                  + constrain(tar[:, :, 0], omega[index], contour, ngb_flag[index])
+    u_g[index] = (u_g_tar + u_g_src) / 2.0 \
+                  + constrain(tar[:, :, 1], omega[index], contour, ngb_flag[index])
+    u_r[index] = (u_r_tar + u_r_src) / 2.0 \
+                  + constrain(tar[:, :, 2], omega[index], contour, ngb_flag[index])
 
 
 
 
   return u_b, u_g, u_r
+
 
 
 
@@ -456,13 +590,13 @@ def progress_bar(n, N):
   print current progress
   '''
 
+  step = 2
   percent = float(n) / float(N) * 100
 
   ## convert percent to bar
-  current = "#" * int(percent//2)
-  # current = "=" * int(percent//2)
-  remain = " " * int(100/2-int(percent//2))
-  bar = "|{}{}|".format(current, remain)# + "#" * int(percent//2) + " " * int(100/2-int(percent//2)) + "|"
+  current = "#" * int(percent//step)
+  remain = " " * int(100/step-int(percent//step))
+  bar = "|{}{}|".format(current, remain)
   print("\r{}:{:3.0f}[%]".format(bar, percent), end="", flush=True)
   
 
@@ -518,15 +652,17 @@ def poisson_blend(src, mask, tar, method, output_dir):
 
   ## select process type
   if(method == "import"):
-    u_b, u_g, u_r = gradient_matrix(src, tar, omega, contour, ngb_flag)
+    u_b, u_g, u_r = importing_gradients(src, tar, omega, contour, ngb_flag)
     print("\n")
   if(method == "mix"):
-    u_b, u_g, u_r =  mixing_gradient_matrix(src, tar, omega, contour, ngb_flag)
+    u_b, u_g, u_r =  mixing_gradients(src, tar, omega, contour, ngb_flag)
     print("\n")
   if(method == "average"):
-    u_b, u_g, u_r =  average_gradient_matrix(src, tar, omega, contour, ngb_flag)
+    u_b, u_g, u_r =  average_gradients(src, tar, omega, contour, ngb_flag)
     print("\n")
-
+  if(method == "flatten"):
+    u_b, u_g, u_r = texture_flatten(src, tar, omega, contour, ngb_flag)
+    print("\n")
 
 
 
