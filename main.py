@@ -4,8 +4,8 @@
   @Affiliation: Waseda University
   @Email: rinsa@suou.waseda.jp
   @Date: 2019-03-14 16:51:01
-  @Last Modified by:   Tsukasa Nozawa
-  @Last Modified time: 2019-03-21 23:22:59
+  @Last Modified by:   rinsa318
+  @Last Modified time: 2019-03-27 00:17:55
  ----------------------------------------------------
 
   Usage:
@@ -23,6 +23,7 @@ import os
 import sys
 import cv2
 import numpy as np
+import time
 
 
 ## my function
@@ -35,6 +36,7 @@ print(__doc__)
 
 
 ### 1. prepare config
+start = time.time() 
 argvs = sys.argv
 src_path = argvs[1]
 src_mask_path = argvs[2]
@@ -72,16 +74,17 @@ ret, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU)
 
 ### 4. apply poisson image editing
 blended, overlapped = poisson.poisson_blend(src, mask/255.0, tar, method, output_dir)
-
+end = time.time() 
 
 
 
 ### 5. save result
 print("save blended image as \n--> \n{0}\n{1}\n{2}".format(outfile[0], outfile[1], outfile[2]))
+print("execution time: {0}[sec]".format(round(end - start, 2)))
 merged_result = np.hstack((np.array(src*255, dtype=np.uint8), cv2.merge((mask, mask, mask)), np.array(tar*255, dtype=np.uint8), overlapped, blended))
 cv2.imwrite(outname_merged, merged_result)
 cv2.imwrite(outname_overlapped, overlapped)
 cv2.imwrite(outname, blended)
-# cv2.imshow("output", merged_result)
-# cv2.waitKey(0)
+cv2.imshow("output", merged_result)
+cv2.waitKey(0)
 
